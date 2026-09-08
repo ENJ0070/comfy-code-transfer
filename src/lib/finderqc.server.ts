@@ -87,8 +87,7 @@ export async function fetchFinderQcById(
       hasMore: groups.length >= pageSize,
       source: `https://finderqc.com/product/${spu.mallType || "Weidian"}/${itemId}`,
     };
-  } catch (e) {
-    console.error("[finderqc] fail", e);
+  } catch {
     return EMPTY;
   }
 }
