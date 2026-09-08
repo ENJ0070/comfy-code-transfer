@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { secureMutate } from "@/lib/secure.functions";
 import { getPanelToken } from "@/lib/panelToken";
 
@@ -9,14 +10,24 @@ async function run(
   values?: unknown,
   id?: string | null,
 ): Promise<Result> {
+  let result: Result;
   try {
-    return await secureMutate({
+    result = await secureMutate({
       data: { token: getPanelToken(), table, op, values: values ?? null, id: id ?? null },
     });
   } catch {
-    return { error: "Operation failed" };
+    result = { error: "Operation failed" };
   }
+  if (result.error) {
+    toast.error(
+      result.error === "Unauthorized"
+        ? "Brak uprawnień — zaloguj się ponownie."
+        : "Nie udało się zapisać — brak połączenia z bazą danych.",
+    );
+  }
+  return result;
 }
+
 
 /**
  * Mirrors the small slice of the Supabase query API the panels use, but routes

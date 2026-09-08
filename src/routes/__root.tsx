@@ -20,6 +20,8 @@ import { StickersBackground } from "@/components/StickersBackground";
 import { LanguageProvider } from "@/lib/i18n";
 import { CurrencyProvider } from "@/lib/currency";
 import { CartProvider } from "@/lib/cart";
+import { Toaster } from "@/components/ui/sonner";
+
 
 
 
@@ -152,6 +154,8 @@ function RootComponent() {
           {!isPanel && <FloatingIsland />}
           {!isPanel && <PromoModal />}
           <ScrollToTop />
+          <Toaster richColors position="top-center" />
+
         </div>
         </CartProvider>
         </CurrencyProvider>
