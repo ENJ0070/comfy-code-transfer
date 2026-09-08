@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { lookupQc } from "@/lib/media.functions";
-import { qcForProduct } from "@/lib/qc.functions";
+import { finderQcByLink, finderQcByProduct } from "@/lib/finderqc.functions";
 import { useProducts, type Product } from "@/lib/store";
 import { useLang } from "@/lib/i18n";
 import { QcGrid } from "@/components/QcViewer";
+import { QcPhotos } from "@/components/QcPhotos";
 
 export const Route = createFileRoute("/qc")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -31,64 +31,39 @@ export const Route = createFileRoute("/qc")({
   component: QcPage,
 });
 
-type Lookup = Awaited<ReturnType<typeof lookupQc>> | null;
-
 function QcPage() {
   const { t } = useLang();
   const { data: products } = useProducts();
-  const run = useServerFn(lookupQc);
-  const loadProductQc = useServerFn(qcForProduct);
+  const runLink = useServerFn(finderQcByLink);
+  const runProduct = useServerFn(finderQcByProduct);
   const { product: productId } = Route.useSearch();
   const [url, setUrl] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<Lookup>(null);
+  const [query, setQuery] = useState("");
   const [error, setError] = useState("");
-  const [focused, setFocused] = useState<{ title: string; images: string[] } | null>(null);
-  const [focusBusy, setFocusBusy] = useState(false);
 
-  useEffect(() => {
-    if (!productId) {
-      setFocused(null);
-      return;
-    }
-    let alive = true;
-    setFocusBusy(true);
-    setFocused(null);
-    void loadProductQc({ data: { productId } })
-      .then((res) => {
-        if (alive && res.ok) setFocused({ title: res.title, images: res.images });
-      })
-      .catch(() => {})
-      .finally(() => alive && setFocusBusy(false));
-    return () => {
-      alive = false;
-    };
-  }, [productId, loadProductQc]);
-
-  
+  const loadLinkPage = useCallback(
+    (page: number) => runLink({ data: { url: query, page, pageSize: 3 } }),
+    [runLink, query],
+  );
+  const loadProductPage = useCallback(
+    (page: number) => runProduct({ data: { productId: productId ?? "", page, pageSize: 3 } }),
+    [runProduct, productId],
+  );
 
   const withQc = useMemo(
     () => (products ?? []).filter((p: Product) => (p.qc_images ?? []).length > 0),
     [products],
   );
 
-  async function search() {
-    if (!/^https?:\/\//i.test(url.trim())) {
+  function search() {
+    const value = url.trim();
+    if (!/^https?:\/\//i.test(value)) {
       setError(t("qc.badLink"));
+      setQuery("");
       return;
     }
-    setBusy(true);
     setError("");
-    setResult(null);
-    try {
-      const res = await run({ data: { url: url.trim() } });
-      if (!res.ok) setError(t("qc.notFound"));
-      else setResult(res);
-    } catch {
-      setError(t("qc.notFound"));
-    } finally {
-      setBusy(false);
-    }
+    setQuery(value);
   }
 
   return (
@@ -106,10 +81,9 @@ function QcPage() {
         />
         <button
           onClick={search}
-          disabled={busy}
           className="rounded-lg gradient-brand px-6 py-2.5 text-xs font-extrabold uppercase tracking-wide text-surface-deep disabled:opacity-60"
         >
-          {busy ? t("qc.loading") : t("qc.search")}
+          {t("qc.search")}
         </button>
       </div>
 
@@ -121,29 +95,20 @@ function QcPage() {
 
       {productId ? (
         <section className="mb-10 rounded-2xl border border-border bg-surface p-4">
-          <h2 className="mb-3 text-lg font-bold">{focused?.title || t("qc.result")}</h2>
-          {focusBusy ? (
-            <p className="rounded-xl border border-border bg-surface-deep p-4 text-center text-sm text-muted-foreground">
-              {t("qc.loading")}
-            </p>
-          ) : (
-            <QcGrid images={focused?.images ?? []} />
-          )}
+          <h2 className="mb-3 text-lg font-bold">{t("qc.result")}</h2>
+          <QcPhotos
+            key={productId}
+            loadPage={loadProductPage}
+            autoLoad
+            emptyText={t("qc.notFound")}
+          />
         </section>
       ) : null}
 
-      {result?.ok ? (
+      {query ? (
         <section className="mb-10">
-          <h2 className="mb-3 text-lg font-bold">{result.title || t("qc.result")}</h2>
-          <QcGrid images={result.qcImages} />
-          {result.colorImages.length ? (
-            <>
-              <h3 className="mb-2 mt-6 text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                {t("qc.colors")}
-              </h3>
-              <QcGrid images={result.colorImages} />
-            </>
-          ) : null}
+          <h2 className="mb-3 text-lg font-bold">{t("qc.result")}</h2>
+          <QcPhotos key={query} loadPage={loadLinkPage} autoLoad emptyText={t("qc.notFound")} />
         </section>
       ) : null}
 

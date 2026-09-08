@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { PriceTags, QualityBadges, VerifiedBadge } from "@/components/PriceTags";
@@ -6,7 +6,10 @@ import type { Agent, Product } from "@/lib/store";
 import { registerProductView } from "@/lib/secure.functions";
 import { safeStorage } from "@/lib/store";
 import { useLang } from "@/lib/i18n";
-import { QcGrid } from "@/components/QcViewer";
+import { useServerFn } from "@tanstack/react-start";
+
+import { QcPhotos } from "@/components/QcPhotos";
+import { finderQcByProduct } from "@/lib/finderqc.functions";
 
 /** Interactive shopping modal: pick colorway + size, then buy through an agent. */
 export function ProductModal({
@@ -24,6 +27,11 @@ export function ProductModal({
   const { t } = useLang();
   const [active, setActive] = useState(0);
   const [size, setSize] = useState(product.sizes?.[0] ?? "");
+  const fetchQc = useServerFn(finderQcByProduct);
+  const loadQcPage = useCallback(
+    (page: number) => fetchQc({ data: { productId: product.id, page, pageSize: 3 } }),
+    [fetchQc, product.id],
+  );
 
   // Licznik wyświetleń: raz na produkt w ramach sesji przeglądarki.
   useEffect(() => {
@@ -152,16 +160,19 @@ export function ProductModal({
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                 QC
               </p>
-              <QcGrid images={(product.qc_images ?? []).slice(0, 6)} cols="grid-cols-3" />
-              {(product.qc_images ?? []).length > 6 ? (
-                <Link
-                  to="/qc"
-                  search={{ product: product.id }}
-                  className="mt-2 block rounded-lg border border-border px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-primary hover:border-primary"
-                >
-                  Pokaż wszystkie QC ({(product.qc_images ?? []).length}) →
-                </Link>
-              ) : null}
+              <QcPhotos
+                loadPage={loadQcPage}
+                cols="grid-cols-3"
+                startText="Pokaż więcej zdjęć QC"
+                emptyText="Brak zdjęć QC dla tego produktu."
+              />
+              <Link
+                to="/qc"
+                search={{ product: product.id }}
+                className="mt-2 block rounded-lg border border-border px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-muted-foreground hover:border-primary hover:text-primary"
+              >
+                Otwórz stronę QC →
+              </Link>
             </div>
 
 
