@@ -8,6 +8,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { trackParcel, type TrackResult } from "@/lib/tracking.functions";
 import { lookupQc } from "@/lib/media.functions";
 import { QcGrid } from "@/components/QcViewer";
+import { AgentRankBadge } from "@/components/AgentRankBadge";
+import { agentRank, sortAgentsByRank } from "@/lib/agentRank";
 
 export const Route = createFileRoute("/poradnik")({
   head: () => ({
@@ -190,7 +192,7 @@ function LinkConverter() {
   const [url, setUrl] = useState("");
   const [copied, setCopied] = useState("");
 
-  const list = agents ?? [];
+  const list = sortAgentsByRank(agents ?? [], settings);
   const source = extractSourceLink(url);
   const invalid = url.trim().length > 0 && !source;
 
@@ -225,28 +227,45 @@ function LinkConverter() {
             {list.map((a) => {
               const out = linkFor(a.name);
               return (
-                <div key={a.id} className="flex items-center gap-2">
-                  <a
-                    href={out}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex flex-1 items-center gap-2 rounded-lg gradient-brand px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-surface-deep transition-transform hover:scale-[1.02]"
-                  >
-                    {a.avatar_url ? (
-                      <img src={a.avatar_url} alt="" className="h-4 w-4 rounded-full object-cover" />
-                    ) : null}
-                    {t("guide.openIn")} {a.name}
-                  </a>
-                  <button
-                    className="rounded-lg border border-border px-2 py-2 text-[11px] font-semibold hover:border-primary hover:text-primary"
-                    onClick={() => {
-                      void navigator.clipboard.writeText(out);
-                      setCopied(a.id);
-                      setTimeout(() => setCopied(""), 1500);
-                    }}
-                  >
-                    {copied === a.id ? "OK" : t("guide.copy")}
-                  </button>
+                <div key={a.id} className="relative rounded-lg border border-border p-2">
+                  <AgentRankBadge rank={agentRank(a, settings)} />
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={out}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex flex-1 items-center gap-2 rounded-lg gradient-brand px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-surface-deep transition-transform hover:scale-[1.02]"
+                    >
+                      {a.avatar_url ? (
+                        <img
+                          src={a.avatar_url}
+                          alt=""
+                          className="h-4 w-4 rounded-full object-cover"
+                        />
+                      ) : null}
+                      {t("guide.openIn")} {a.name}
+                    </a>
+                    <button
+                      className="rounded-lg border border-border px-2 py-2 text-[11px] font-semibold hover:border-primary hover:text-primary"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(out);
+                        setCopied(a.id);
+                        setTimeout(() => setCopied(""), 1500);
+                      }}
+                    >
+                      {copied === a.id ? "OK" : t("guide.copy")}
+                    </button>
+                  </div>
+                  {a.referral_url ? (
+                    <a
+                      href={a.referral_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block text-[10px] font-bold uppercase tracking-wide text-primary hover:underline"
+                    >
+                      Zarejestruj się w {a.name}
+                    </a>
+                  ) : null}
                 </div>
               );
             })}
