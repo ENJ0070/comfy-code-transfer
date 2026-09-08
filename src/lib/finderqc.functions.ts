@@ -73,8 +73,31 @@ export const finderQcByProduct = createServerFn({ method: "POST" })
       }
     }
 
-    // Fallback: zdjęcia QC zapisane wcześniej w bazie.
     if (data.page > 1) return { ...empty, title: (row as any).title ?? "" };
+
+    // Zapas 1: magazyn USFans (ma QC dla prawie każdego produktu).
+    if (src) {
+      const { fetchAgentDetails } = await import("@/lib/agentApi");
+      const details = await fetchAgentDetails(src).catch(() => null);
+      const usfans = (details?.qcImages ?? []).filter((u) => /^https?:\/\//i.test(u));
+      if (usfans.length) {
+        await supabaseAdmin
+          .from("products")
+          .update({ qc_images: usfans.slice(0, 10) })
+          .eq("id", data.productId);
+        return {
+          ok: true as const,
+          title: ((row as any).title as string) || details?.title || "",
+          images: usfans,
+          totalPhotos: usfans.length,
+          hasMore: false,
+          source: "",
+        };
+      }
+    }
+
+    // Zapas 2: zdjęcia QC zapisane wcześniej w bazie.
+
     const stored = (((row as any).qc_images ?? []) as string[]).filter((u) =>
       /^https?:\/\//i.test(u),
     );
