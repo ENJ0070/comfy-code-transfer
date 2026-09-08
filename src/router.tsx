@@ -3,7 +3,21 @@ import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
 export const getRouter = () => {
-  const queryClient = new QueryClient();
+  // Dane katalogu są cache'owane przez chwilę — strona nie przeładowuje
+  // całej listy przy każdym przejściu między zakładkami (dużo szybsze działanie).
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60_000,
+        gcTime: 30 * 60_000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
+        retry: 1,
+      },
+    },
+  });
+
 
   const router = createRouter({
     routeTree,
