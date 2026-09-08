@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAgents, useSettings, useSocialLinks } from "@/lib/store";
 import { useLang } from "@/lib/i18n";
+import { AgentRankBadge } from "@/components/AgentRankBadge";
+import { agentRank, sortAgentsByRank } from "@/lib/agentRank";
 
 export const Route = createFileRoute("/agenci")({
   head: () => ({
@@ -64,14 +66,15 @@ function AgenciPage() {
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {(agents ?? []).map((a) => (
+        {sortAgentsByRank(agents ?? [], settings).map((a) => (
           <a
             key={a.id}
             href={a.referral_url}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-5 transition-all hover:-translate-y-1 hover:border-primary hover:glow-ring"
+            className="relative flex items-center gap-3 rounded-2xl border border-border bg-surface p-5 transition-all hover:-translate-y-1 hover:border-primary hover:glow-ring"
           >
+            <AgentRankBadge rank={agentRank(a, settings)} />
             {a.avatar_url ? (
               <img
                 src={a.avatar_url}
