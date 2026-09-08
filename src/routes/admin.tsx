@@ -928,6 +928,33 @@ function AgentsTab() {
       </div>
 
       <div className="rounded-3xl border border-border bg-surface p-6 shadow-lg shadow-black/20">
+        <h2 className="mb-1 text-lg font-bold">Podium (TOP 1/2/3)</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          TOP 1 dostaje złotą blaszkę #1. Podium widać na stronie „Agenci” i w konwerterze linków.
+        </p>
+        <div className="mb-6 grid gap-2 sm:grid-cols-3">
+          {TOP_AGENT_KEYS.map((key, i) => (
+            <label key={key} className="block text-xs font-semibold text-muted-foreground">
+              TOP {i + 1}
+              <select
+                className={`${input} mt-1`}
+                value={settings?.[key] ?? ""}
+                onChange={async (e) => {
+                  await saveSetting(key, e.target.value);
+                  await refresh("settings");
+                }}
+              >
+                <option value="">— brak —</option>
+                {(agents ?? []).map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+
         <h2 className="mb-4 text-lg font-bold">Agenci</h2>
         <ul className="space-y-2">
           {(agents ?? []).map((a) => (
