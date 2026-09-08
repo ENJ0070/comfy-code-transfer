@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { QcGrid } from "@/components/QcViewer";
 import { useEffect, useState, useMemo } from "react";
 import { panelDb } from "@/lib/panelDb";
 import { adminExportProducts, adminLogin, adminSellerUsernames } from "@/lib/secure.functions";
