@@ -13,8 +13,25 @@ export const finderQcByLink = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { fetchFinderQcByUrl } = await import("@/lib/finderqc.server");
-    return fetchFinderQcByUrl(data.url, data.page, data.pageSize);
+    const res = await fetchFinderQcByUrl(data.url, data.page, data.pageSize);
+    if (res.ok && res.images.length) return res;
+    if (data.page > 1) return res;
+
+    // Zapas: magazyn USFans — ma QC dla prawie każdego produktu.
+    const { fetchAgentDetails } = await import("@/lib/agentApi");
+    const details = await fetchAgentDetails(data.url).catch(() => null);
+    const images = (details?.qcImages ?? []).filter((u) => /^https?:\/\//i.test(u));
+    if (!images.length) return res;
+    return {
+      ok: true as const,
+      title: details?.title || res.title,
+      images,
+      totalPhotos: images.length,
+      hasMore: false,
+      source: "",
+    };
   });
+
 
 /** Zdjęcia QC z FinderQC dla produktu z katalogu. */
 export const finderQcByProduct = createServerFn({ method: "POST" })
