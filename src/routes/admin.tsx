@@ -1130,14 +1130,16 @@ function MediaSync() {
     setBusy(true);
     setMsg("Pobieram zdjęcia i QC od agentów...");
     let updated = 0;
+    let cursor = "";
     try {
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 15; i++) {
         const res: any = await syncProductMedia({
-          data: { token: getPanelToken(), limit: 30, onlyMissing },
+          data: { token: getPanelToken(), limit: 30, onlyMissing, cursor },
         });
         updated += Number(res?.updated ?? 0);
         setMsg(`Zaktualizowano ${updated} produktów...`);
-        if (!res?.checked || res.updated === 0) break;
+        cursor = String(res?.nextCursor ?? "");
+        if (!res?.checked || !cursor) break;
       }
       await refresh("products");
       setMsg(`Gotowe — zaktualizowano ${updated} produktów.`);
@@ -1545,6 +1547,12 @@ function ProductsTab() {
               urls={parseList(form.images)}
               folder="products"
               onChange={(u) => setForm({ ...form, images: u.join(", ") })}
+            />
+            <ImageUploader
+              urls={parseList(form.qc_images)}
+              folder="products/qc"
+              label="Dodaj zdjęcia QC z urządzenia"
+              onChange={(u) => setForm({ ...form, qc_images: u.join(", ") })}
             />
           </div>
 
