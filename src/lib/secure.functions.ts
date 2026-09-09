@@ -159,10 +159,11 @@ export const secureMutate = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     if (session.role === "seller" && (data.op === "update" || data.op === "delete")) {
+      if (!data.id) return { error: "Unauthorized" };
       const { data: row } = await supabaseAdmin
         .from("products")
         .select("seller_id")
-        .eq("id", data.id!)
+        .eq("id", data.id)
         .maybeSingle();
       if (!row || row.seller_id !== session.sellerId) return { error: "Unauthorized" };
     }
@@ -266,8 +267,10 @@ export const uploadImage = createServerFn({ method: "POST" })
       upsert: false,
     });
     if (error) throw new Error("Upload failed");
-    // Store a stable application URL, never an expiring signed storage URL.
-    return { url: `/api/public/product-image?path=${encodeURIComponent(path)}` };
+    // Public bucket URLs work in preview and after publishing (including Vercel).
+    const { data: publicFile } = supabaseAdmin.storage.from("product-images").getPublicUrl(path);
+    if (!publicFile.publicUrl) throw new Error("Upload URL failed");
+    return { url: publicFile.publicUrl };
   });
 
 /** Public shipping rates incl. coupon fields, served server-side so they are not exposed via the public data API. */

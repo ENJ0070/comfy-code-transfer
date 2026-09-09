@@ -27,10 +27,11 @@ export const lookupQc = createServerFn({ method: "POST" })
  * Wywoływane z panelu admina — wymaga podpisanego tokenu sesji.
  */
 export const syncProductMedia = createServerFn({ method: "POST" })
-  .inputValidator((data: { token: string; limit?: number; onlyMissing?: boolean }) => ({
+  .inputValidator((data: { token: string; limit?: number; onlyMissing?: boolean; cursor?: string }) => ({
     token: String(data?.token ?? "").slice(0, 4000),
     limit: Math.min(100, Math.max(1, Number(data?.limit) || 40)),
     onlyMissing: data?.onlyMissing !== false,
+    cursor: String(data?.cursor ?? "").slice(0, 100),
   }))
   .handler(async ({ data }) => {
     const { verifyToken } = await import("@/lib/session.server");
@@ -43,8 +44,9 @@ export const syncProductMedia = createServerFn({ method: "POST" })
     let query = supabaseAdmin
       .from("products")
       .select("id, image_url, images, qc_images, store_url, qc_url, agent_links")
+      .order("id", { ascending: true })
       .limit(data.limit);
-    if (data.onlyMissing) query = query.or("image_url.is.null,image_url.like./api/public/%");
+    if (data.cursor) query = query.gt("id", data.cursor);
 
     const { data: rows, error } = await query;
     if (error) throw new Error("Nie udało się pobrać produktów.");
@@ -56,21 +58,34 @@ export const syncProductMedia = createServerFn({ method: "POST" })
       const chunk = items.slice(i, i + 5);
       await Promise.all(
         chunk.map(async (p: any) => {
+          const external = (u: string) => /^https?:\/\//i.test(u);
+          const mainOk = Boolean(p.image_url && external(p.image_url));
+          const currentImages = (p.images ?? []).filter(external);
+          const currentQc = (p.qc_images ?? []).filter(external);
+          if (data.onlyMissing && mainOk && currentImages.length && currentQc.length) {
+            return void skipped++;
+          }
+
           const src = productSourceUrl(p);
           if (!src) return void skipped++;
-          const details = await fetchAgentDetails(src).catch(() => null);
+          const [{ fetchFinderQcByUrl }, details] = await Promise.all([
+            import("@/lib/finderqc.server"),
+            fetchAgentDetails(src).catch(() => null),
+          ]);
+          const finder = currentQc.length
+            ? null
+            : await fetchFinderQcByUrl(src, 1, 10).catch(() => null);
           if (!details) return void skipped++;
 
-          const external = (u: string) => /^https?:\/\//i.test(u);
-          const keep = (p.images ?? []).filter(external);
-          const images = Array.from(new Set([...details.images, ...keep])).slice(0, 24);
+          const images = Array.from(
+            new Set([...currentImages, ...details.colorImages, ...details.images]),
+          ).slice(0, 24);
           const qc = Array.from(
-            new Set([...(p.qc_images ?? []).filter(external), ...details.qcImages]),
+            new Set([...currentQc, ...(finder?.images ?? []), ...details.qcImages]),
           ).slice(0, 10);
-          const mainOk = p.image_url && external(p.image_url);
           const patch: { images?: string[]; qc_images?: string[]; image_url?: string } = {};
-          if (images.length) patch.images = images;
-          if (qc.length) patch.qc_images = qc;
+          if ((!data.onlyMissing || !currentImages.length) && images.length) patch.images = images;
+          if ((!data.onlyMissing || !currentQc.length) && qc.length) patch.qc_images = qc;
           if (!mainOk && images.length) patch.image_url = images[0]!;
           if (!Object.keys(patch).length) return void skipped++;
 
@@ -81,5 +96,11 @@ export const syncProductMedia = createServerFn({ method: "POST" })
       );
     }
 
-    return { ok: true as const, checked: items.length, updated, skipped };
+    return {
+      ok: true as const,
+      checked: items.length,
+      updated,
+      skipped,
+      nextCursor: items.length === data.limit ? String(items.at(-1)?.id ?? "") : "",
+    };
   });
