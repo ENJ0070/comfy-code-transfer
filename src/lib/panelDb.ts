@@ -15,15 +15,21 @@ async function run(
     result = await secureMutate({
       data: { token: getPanelToken(), table, op, values: values ?? null, id: id ?? null },
     });
-  } catch {
-    result = { error: "Operation failed" };
+  } catch (error) {
+    result = {
+      error: error instanceof Error && error.message === "Unauthorized"
+        ? "Unauthorized"
+        : "Operation failed",
+    };
   }
   if (result.error) {
     toast.error(
       result.error === "Unauthorized"
         ? "Brak uprawnień — zaloguj się ponownie."
-        : "Nie udało się zapisać — brak połączenia z bazą danych.",
+        : "Nie udało się zapisać. Sprawdź połączenie strony z bazą i spróbuj ponownie.",
     );
+  } else {
+    toast.success("Zmiany zapisane.");
   }
   return result;
 }

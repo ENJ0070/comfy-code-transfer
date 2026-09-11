@@ -863,8 +863,10 @@ function AgentsTab() {
 
   const save = async () => {
     if (!form.name) return;
-    if (form.id) await panelDb.from("agents").update(form).eq("id", form.id);
-    else await panelDb.from("agents").insert(form);
+    const result = form.id
+      ? await panelDb.from("agents").update(form).eq("id", form.id)
+      : await panelDb.from("agents").insert(form);
+    if (result.error) return;
     await saveSetting(`converter_${form.name.trim().toLowerCase()}`, template);
     setForm(empty);
     setTemplate("");
@@ -1362,8 +1364,10 @@ function ProductsTab() {
       store_name: form.store_name,
       agent_links: agentLinks,
     };
-    if (form.id) await panelDb.from("products").update(payload).eq("id", form.id);
-    else await panelDb.from("products").insert(payload);
+    const result = form.id
+      ? await panelDb.from("products").update(payload).eq("id", form.id)
+      : await panelDb.from("products").insert(payload);
+    if (result.error) return;
     setForm(empty);
     await refresh("products");
   };
