@@ -7,7 +7,9 @@ const TTL_MS = 1000 * 60 * 60 * 12;
 
 function secret(): string {
   return (
+    process.env["PANEL_SESSION_SECRET"] ||
     process.env["SUPABASE_SERVICE_ROLE_KEY"] ||
+    process.env["DB_SECRET_KEY"] ||
     process.env["SUPABASE_DB_URL"] ||
     "insecure-dev-secret"
   );

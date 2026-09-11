@@ -13,6 +13,11 @@ import { useLang } from "@/lib/i18n";
 const MIN_KG = 0.5;
 const MAX_KG = 25;
 
+const agentKey = (name: string) => {
+  const key = name.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  return key === "kakobuy" ? "kakaobuy" : key;
+};
+
 /** Weight-based shipping comparison across agents, driven by admin-managed rates. */
 export function HaulCalculator() {
   const { t } = useLang();
@@ -22,12 +27,12 @@ export function HaulCalculator() {
   const [withCoupons, setWithCoupons] = useState(true);
 
   const avatarOf = (name: string) =>
-    (agents ?? []).find((a) => a.name.toLowerCase() === name.toLowerCase())?.avatar_url ?? null;
+    (agents ?? []).find((a) => agentKey(a.name) === agentKey(name))?.avatar_url ?? null;
 
   /** Link rejestracyjny agenta — z linii wysyłkowej, a w razie braku z profilu agenta. */
   const signupOf = (rate: ShippingRate) =>
     rate.signup_url ||
-    (agents ?? []).find((a) => a.name.toLowerCase() === rate.agent_name.toLowerCase())
+    (agents ?? []).find((a) => agentKey(a.name) === agentKey(rate.agent_name))
       ?.referral_url ||
     "";
 
