@@ -867,8 +867,7 @@ function AgentsTab() {
       ? await panelDb.from("agents").update(form).eq("id", form.id)
       : await panelDb.from("agents").insert(form);
     if (result.error) return;
-    const settingError = await saveSetting(`converter_${form.name.trim().toLowerCase()}`, template);
-    if (settingError) return;
+    await saveSetting(`converter_${form.name.trim().toLowerCase()}`, template);
     setForm(empty);
     setTemplate("");
     await refresh("agents");
