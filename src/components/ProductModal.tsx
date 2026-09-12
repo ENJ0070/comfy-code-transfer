@@ -162,7 +162,10 @@ export function ProductModal({
               </p>
               <QcPhotos
                 loadPage={loadQcPage}
+                initialImages={storedQc}
+                autoLoad={storedQc.length === 0}
                 cols="grid-cols-3"
+                buttonText="Pokaż więcej zdjęć QC"
                 startText="Pokaż więcej zdjęć QC"
                 emptyText="Brak zdjęć QC dla tego produktu."
               />
