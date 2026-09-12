@@ -18,6 +18,7 @@ const STEP = 6;
 export function QcPhotos({
   loadPage,
   autoLoad = false,
+  initialImages,
   cols,
   emptyText = "Nie znaleziono zdjęć QC.",
   buttonText = "Pokaż więcej",
@@ -25,12 +26,14 @@ export function QcPhotos({
 }: {
   loadPage: (page: number) => Promise<QcPage>;
   autoLoad?: boolean;
+  /** Zdjęcia znane od razu (np. zapisane przy produkcie) — widoczne bez klikania. */
+  initialImages?: string[];
   cols?: string;
   emptyText?: string;
   buttonText?: string;
   startText?: string;
 }) {
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>(initialImages ?? []);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [shown, setShown] = useState(STEP);
@@ -61,6 +64,12 @@ export function QcPhotos({
     if (autoLoad && page === 0 && !busy) void fetchNext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLoad]);
+
+  useEffect(() => {
+    if (!initialImages?.length) return;
+    setImages((prev) => Array.from(new Set([...initialImages, ...prev])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialImages?.join("|")]);
 
   function more() {
     if (shown < images.length) {

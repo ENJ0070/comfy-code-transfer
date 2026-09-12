@@ -1850,7 +1850,10 @@ function SellersTab() {
   const [msg, setMsg] = useState("");
 
   const save = async () => {
-    if (!form.name.trim() || !form.username.trim()) return;
+    if (!form.name.trim()) return setMsg("Podaj nazwę sklepu.");
+    if (!form.username.trim()) return setMsg("Podaj login sprzedawcy.");
+    if (!form.id && !form.password.trim()) return setMsg("Podaj hasło dla nowego sprzedawcy.");
+    setMsg("");
     const slug =
       (form.slug || form.name).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const base = {
