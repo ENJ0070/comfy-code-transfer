@@ -65,6 +65,12 @@ export function QcPhotos({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLoad]);
 
+  useEffect(() => {
+    if (!initialImages?.length) return;
+    setImages((prev) => Array.from(new Set([...initialImages, ...prev])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialImages?.join("|")]);
+
   function more() {
     if (shown < images.length) {
       setShown((s) => s + STEP);
