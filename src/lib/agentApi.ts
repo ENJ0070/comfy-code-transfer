@@ -37,13 +37,41 @@ export async function fetchAgentDetails(rawUrl: string): Promise<AgentDetails | 
   const parsed = extractSourceLink(rawUrl);
   if (!parsed) return null;
 
-  const [info, estimate] = await Promise.all([
-    getJson(
-      `https://www.usfans.com/api/goods/info?channel=${CHANNEL[parsed.platform]}&goodsId=${parsed.id}`,
-    ),
-    getJson(`https://www.usfans.com/api/goods/estimate-info?goodsId=${parsed.id}`),
-  ]);
-  if (!info?.goodsId) return null;
+  // Kanał zapisany w linku bywa błędny (link Taobao, a produkt leży na 1688 itd.),
+  // dlatego po nieudanej próbie sprawdzamy pozostałe magazyny agentów.
+  const channels = Array.from(new Set([CHANNEL[parsed.platform], "1", "2", "3"]));
+
+  const estimatePromise = getJson(
+    `https://www.usfans.com/api/goods/estimate-info?goodsId=${parsed.id}`,
+  );
+
+  let info: any = null;
+  for (const channel of channels) {
+    const res = await getJson(
+      `https://www.usfans.com/api/goods/info?channel=${channel}&goodsId=${parsed.id}`,
+    );
+    if (res?.goodsId) {
+      info = res;
+      break;
+    }
+  }
+
+  const estimate = await estimatePromise;
+
+  if (!info?.goodsId) {
+    const onlyQc: string[] = Array.isArray(estimate?.qcImages)
+      ? estimate.qcImages.map(String).filter(Boolean).slice(0, 10)
+      : [];
+    if (!onlyQc.length) return null;
+    return {
+      title: "",
+      priceCny: 0,
+      images: [],
+      colorImages: [],
+      qcImages: Array.from(new Set(onlyQc)),
+      sizes: [],
+    };
+  }
 
   const gallery: string[] = Array.isArray(info.images) ? info.images.map(String) : [];
 
